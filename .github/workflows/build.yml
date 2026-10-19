@@ -12,13 +12,11 @@ jobs:
   image:
     runs-on: ubuntu-latest
     # Environnements GitHub "prod" (branche main) et "dev" (branche dev) :
-    # chacun porte ses propres variables VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
+    # Variables VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
     environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
 
     steps:
       - uses: actions/checkout@v4
-
-      # GHCR exige un nom d'image en minuscules
       - name: Nom de l'image
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
