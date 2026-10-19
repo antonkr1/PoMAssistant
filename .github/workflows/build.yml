@@ -1,0 +1,41 @@
+name: build-and-push
+
+on:
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    # Environnements GitHub "prod" (branche main) et "dev" (branche dev) :
+    # chacun porte ses propres variables VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR exige un nom d'image en minuscules
+      - name: Nom de l'image
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # Un tag immuable par commit (pour le déploiement) + un tag mobile par branche
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:${{ github.ref_name }}
+          build-args: |
+            VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}
+            VITE_SUPABASE_ANON_KEY=${{ vars.VITE_SUPABASE_ANON_KEY }}
