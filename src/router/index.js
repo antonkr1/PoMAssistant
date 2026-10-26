@@ -22,9 +22,14 @@ const router = createRouter({
       component: () => import('../views/CatalogueView.vue'),
     },
     {
-      path: '/select-user',
-      name: 'select-user',
-      component: () => import('../views/SelectUserView.vue'),
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/LoginView.vue'),
+    },
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('../views/OnboardingView.vue'),
     },
     {
       path: '/tracker',
@@ -49,14 +54,24 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+// Il faut être connecté (Discord) et appartenir à une guilde pour utiliser l'app.
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
-
-  if (!userStore.currentUserId && to.name === 'arena-duos') {
-    return { name: 'home' }
+  await userStore.init()
+  if (import.meta.env.DEV) {
+    console.info('[auth] navigation vers', to.fullPath.split(/[?#]/)[0], '; connecté =', userStore.isLoggedIn, '; profil =', !!userStore.currentUserId)
   }
 
-  if (!userStore.currentUserId && to.name === 'arena-resources') {
+  if (!userStore.isLoggedIn) {
+    // On garde la query et le hash : Supabase y met le message d'erreur en cas d'échec de connexion
+    return to.name === 'login' ? true : { name: 'login', query: to.query, hash: to.hash }
+  }
+
+  if (!userStore.currentUserId) {
+    return to.name === 'onboarding' ? true : { name: 'onboarding' }
+  }
+
+  if (to.name === 'login' || to.name === 'onboarding') {
     return { name: 'home' }
   }
 })
