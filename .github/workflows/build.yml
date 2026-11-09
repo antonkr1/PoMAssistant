@@ -11,10 +11,38 @@ permissions:
   packages: write
 
 jobs:
+  tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan sécurité (Trivy)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          scanners: "vuln,secret"
+          severity: "CRITICAL"
+          exit-code: "1"
+
+      - name: Installer node 
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Installer les dépendances et exécuter les tests unitaires
+        run: |
+          npm ci
+          npm test
+
+
   image:
     runs-on: ubuntu-latest
     # Environnements GitHub "prod" (branche main) et "dev" (branche dev) :
     # Variables VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
+    needs: tests
     environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
 
     steps:
@@ -24,15 +52,6 @@ jobs:
         run: |
           echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
           echo "TAG=$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
-
-      - name: Vérification du code (Trivy)
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
-        with:
-          scan-type: "fs"
-          scan-ref: "."
-          scanners: "vuln,secret"
-          severity: "CRITICAL"
-          exit-code: "1"
 
       - name: Connexion à GitHub Container Registry
         if: github.event_name == 'push' 
