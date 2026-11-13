@@ -141,7 +141,6 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           audience: ${{ secrets.TS_AUDIENCE }}
           tags: tag:ci
-          args: --accept-routes
 
       - name: Vérifier l'accès à SonarQube
         run: curl -sS -o /dev/null -w "%{http_code}\n" "${{ vars.SONAR_HOST_URL }}/api/system/status"
