@@ -53,33 +53,7 @@ jobs:
           echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
           echo "TAG=$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
-      - name: Connexion à GitHub Container Registry
-        if: github.event_name == 'push' 
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Construire et pousser l'image Docker
-        if: github.event_name == 'push'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
-        with:
-          context: .
-          push: true
-          # Un tag du commit
-          tags: |
-            ${{ env.IMAGE }}:${{ env.TAG }}
-            ${{ env.IMAGE }}:${{ github.ref_name }}
-          labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          build-args: |
-            VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}
-            VITE_SUPABASE_ANON_KEY=${{ vars.VITE_SUPABASE_ANON_KEY }}
-
-      - name: Construction sans publication de l'image Docker (PR)
-        if: github.event_name == 'pull_request'
+      - name: Construction de l'image Docker
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
@@ -103,6 +77,22 @@ jobs:
           severity: "CRITICAL"
           exit-code: "1"
 
+      - name: Connexion à GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publier l'image
+        if: github.event_name == 'push'
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          docker tag "$IMAGE:$TAG" "$IMAGE:$BRANCH"
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:$BRANCH"
 
       - name: Mettre à jour le déploiement (homelab-devops)
         if: github.event_name == 'push' && github.ref_name == 'dev'
@@ -141,9 +131,6 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           audience: ${{ secrets.TS_AUDIENCE }}
           tags: tag:ci
-
-      - name: Vérifier l'accès à SonarQube
-        run: curl -sS -o /dev/null -w "%{http_code}\n" "${{ vars.SONAR_HOST_URL }}/api/system/status"
 
       - name: Analyse SonarQube
         uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
