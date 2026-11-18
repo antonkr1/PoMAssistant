@@ -24,7 +24,7 @@ async function handleLogout() {
 }
 
 function handleLogin() {
-    router.push('/select-user')
+    router.push('/login')
 }
 
 </script>

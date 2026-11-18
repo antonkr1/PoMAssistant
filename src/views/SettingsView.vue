@@ -1,6 +1,9 @@
 <script setup>
+import { computed, onMounted, ref } from 'vue'
+import { supabase } from '@/services/supabase'
 import { useThemeStore } from '@/stores/themeStore'
 import { useAdminStore } from '@/stores/adminStore'
+import { useArenas } from '@/composables/useArenas'
 import { useUsers } from '@/composables/useUsers';
 import { useHistory } from '@/composables/useHistory';
 
@@ -8,6 +11,26 @@ const store = useThemeStore()
 const adminStore = useAdminStore()
 const { historyRows, loadHistory } = useHistory()
 const { users, loadUsers } = useUsers()
+const { arenas, loadArenas } = useArenas()
+
+const guild = computed(() => arenas.value[0] ?? null)
+const inviteCode = ref('')
+const inviteError = ref('')
+
+onMounted(async () => {
+  await loadArenas()
+  inviteCode.value = guild.value?.invite_code ?? ''
+})
+
+async function regenerateInviteCode() {
+  inviteError.value = ''
+  const { data, error } = await supabase.rpc('regenerate_invite_code')
+  if (error) {
+    inviteError.value = error.message
+    return
+  }
+  inviteCode.value = data
+}
 
 function prepareTable() {
   const updatedTable = historyRows.value.map((entry) => {
@@ -67,8 +90,10 @@ async function downloadHistoryCSV() {
       </button>
     </div>
     <div v-if="adminStore.isAdmin" class="admin-section">
-      <p>Connecté en tant qu'admin</p>
-      <button @click="adminStore.logout()">Déconnexion admin</button>
+      <p>Admin de la guilde {{ guild?.name }}</p>
+      <p>Code d'invitation : <strong>{{ inviteCode }}</strong></p>
+      <button @click="regenerateInviteCode()">Générer un nouveau code</button>
+      <p v-if="inviteError" class="error-message">{{ inviteError }}</p>
       <button @click="downloadHistoryCSV()">Télécharger l'historique de modifications</button>
     </div>
     <div class="desc">
@@ -111,5 +136,10 @@ async function downloadHistoryCSV() {
   display: flex;
   flex-direction: column;
   width: 25%;
+}
+
+.error-message {
+  color: rgb(172, 32, 32);
+  font-size: 0.9rem;
 }
 </style>

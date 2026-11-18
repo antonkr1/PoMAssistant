@@ -3,7 +3,6 @@ import { ref, onMounted, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 
 import { useThemeStore } from '@/stores/themeStore'
-import { useAdminStore } from '@/stores/adminStore'
 import AccountBadge from './components/AccountBadge.vue'
 import { useAppIcon } from './composables/useAppIcon'
 import { useUserStore } from './stores/userStore.js'
@@ -11,8 +10,6 @@ import { useUserStore } from './stores/userStore.js'
 useThemeStore()
 const { appIcon, loadAppIcons, assignIcon } = useAppIcon()
 
-const adminStore = useAdminStore()
-adminStore.checkAdminStatus()
 const userStore = useUserStore()
 
 const route = useRoute()
@@ -46,7 +43,7 @@ watch(() => route.path, () => {
       <RouterLink to="/arena-duos" v-if="userStore.currentUserId">Duos de l'arène</RouterLink>
       <RouterLink to="/arena-resources" v-if="userStore.currentUserId">Ressources de l'arène</RouterLink>
       <RouterLink to="/settings">Settings</RouterLink>
-      <AccountBadge v-if="$route.path !== '/select-user'" @click.stop />
+      <AccountBadge v-if="userStore.currentUserId" @click.stop />
     </div>
   </div>
   <div class="router-view" :class="{ 'full-width': route.meta.fullWidth }">
