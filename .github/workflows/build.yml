@@ -11,6 +11,37 @@ permissions:
   packages: write
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      src: ${{ steps.filtre.outputs.src }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Détecter les fichiers modifiés
+        id: filtre
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          # Sur un push : on lance tout, sans comparer
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "src=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          FICHIERS=$(git diff --name-only "origin/${BASE}...HEAD")
+          echo "$FICHIERS"
+
+          if echo "$FICHIERS" | grep -qE '^(src/|sonar-project\.properties$|\.github/workflows/)'; then
+            echo "src=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "src=false" >> "$GITHUB_OUTPUT"
+          fi 
+
   tests:
     runs-on: ubuntu-latest
     permissions:
@@ -114,8 +145,8 @@ jobs:
 
   sonarqube:
     name: sonarqube
-    needs: tests
-    if: github.event_name == 'pull_request' && (github.base_ref == 'dev' || github.base_ref == 'main')
+    needs: [tests, changes]
+    if: github.event_name == 'pull_request' && (github.base_ref == 'dev' || github.base_ref == 'main') && needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
