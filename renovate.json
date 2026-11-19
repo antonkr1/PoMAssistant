@@ -4,5 +4,9 @@
   "baseBranchPatterns": ["dev"],
   "prConcurrentLimit": 5,
   "labels": ["dependencies"],
-  "reviewers": ["antonkr1"]
-}
+  "reviewers": ["antonkr1"],
+  "schedule": ["before 6am on monday"],
+  "packageRules": [
+    { "matchUpdateTypes": ["minor", "patch"], "groupName": "mises à jour non majeures" }
+  ]
+
